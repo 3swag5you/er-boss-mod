@@ -1,0 +1,72 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "openai/gpt-6.1-sol",
+  "default_agent": "planner",
+  "agents": {
+    "planner": {
+      "description": "Plans approved work and coordinates implementation and review",
+      "mode": "primary",
+      "model": "openai/gpt-6.1-sol#high",
+      "system": "You are the planner and coordinator. Follow AGENTS.md and relevant skills. Mod planning is deferred until explicitly requested. Clarify requirements and write only approved planning documentation; delegate implementation to implementer and independent review to reviewer. Supply approved scope, files, acceptance checks, and uncertainties with each handoff. Do not substitute models, implement product changes yourself, or treat opening the workspace as approval to start work.",
+      "permissions": [
+        {"action": "edit", "resource": "*", "effect": "deny"},
+        {"action": "edit", "resource": "*.md", "effect": "allow"},
+        {"action": "subagent", "resource": "*", "effect": "deny"},
+        {"action": "subagent", "resource": "implementer", "effect": "allow"},
+        {"action": "subagent", "resource": "reviewer", "effect": "allow"},
+        {"action": "shell", "resource": "*", "effect": "ask"}
+      ]
+    },
+    "implementer": {
+      "description": "Implements explicitly approved tasks with DeepSeek V4.1 Flash",
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4.1-flash",
+      "system": "You are the implementer. Follow AGENTS.md, the approved task and relevant skills. Implement only the supplied approved scope. Preserve user work, run the task's verification checks, and report changed files, results, blockers and uncertainties. Stop rather than choose an unapproved toolchain, expand scope, substitute models, or touch game files. Do not launch other agents.",
+      "permissions": [
+        {"action": "subagent", "resource": "*", "effect": "deny"},
+        {"action": "shell", "resource": "*", "effect": "ask"}
+      ]
+    },
+    "reviewer": {
+      "description": "Independently reviews approved changes without editing",
+      "mode": "subagent",
+      "model": "openai/gpt-6.1-sol#high",
+      "system": "You are an independent reviewer. Follow AGENTS.md and relevant review skills. Read the approved scope, implementation and checks. Report actionable findings by severity with file and line references, then residual risks and verification limits. Do not mutate files through edit tools, shell commands, APIs or other tools; do not launch other agents or fix findings yourself. Additional verification commands require approval. Never claim static checks prove live provider authentication or in-game behavior.",
+      "permissions": [
+        {"action": "edit", "resource": "*", "effect": "deny"},
+        {"action": "subagent", "resource": "*", "effect": "deny"},
+        {"action": "shell", "resource": "*", "effect": "ask"},
+        {"action": "shell", "resource": "git status --short --branch", "effect": "allow"},
+        {"action": "shell", "resource": "git diff --", "effect": "allow"},
+        {"action": "shell", "resource": "git diff --cached --", "effect": "allow"},
+        {"action": "shell", "resource": "git diff --check", "effect": "allow"},
+        {"action": "shell", "resource": "git diff --cached --check", "effect": "allow"},
+        {"action": "shell", "resource": "git log -5 --oneline", "effect": "allow"},
+        {"action": "shell", "resource": "git ls-files", "effect": "allow"}
+      ]
+    }
+  },
+  "commands": {
+    "er-plan": {
+      "description": "Select Sol high for explicitly requested planning",
+      "agent": "planner",
+      "model": "openai/gpt-6.1-sol#high",
+      "subagent": false,
+      "template": "Handle this explicit planning request under AGENTS.md; do not begin implementation or expand beyond the request: $ARGUMENTS"
+    },
+    "er-implement": {
+      "description": "Run an approved implementation task with DeepSeek",
+      "agent": "implementer",
+      "model": "opencode-go/deepseek-v4.1-flash",
+      "subagent": true,
+      "template": "Implement only this explicitly approved task. If scope, acceptance checks, or required approval is missing, report the blocker without editing: $ARGUMENTS"
+    },
+    "er-review": {
+      "description": "Review changes with Sol high without editing",
+      "agent": "reviewer",
+      "model": "openai/gpt-6.1-sol#high",
+      "subagent": true,
+      "template": "Independently review this scope against its approved requirements. Do not modify files. Report findings and verification limits: $ARGUMENTS"
+    }
+  }
+}

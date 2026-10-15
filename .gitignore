@@ -1,0 +1,21 @@
+# Secrets and per-machine overrides
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# Local game files and saves: never distribute proprietary data
+/game/
+/assets/game/
+/saves/
+*.sl2
+*.sl2.*
+
+# Generated and local output
+/build/
+/dist/
+/artifacts/
+/logs/
+__pycache__/
+*.py[cod]
